@@ -1,6 +1,5 @@
 const { chromium } = require('playwright');
 
-// 1. Credentials
 // 1. Credentials (Hardcoded to bypass environment variable failures)
 const SURFSHARK_USER = 'SHF8NLPGN8J3xDq9ej59XBQ2';
 const SURFSHARK_PASS = 'dd7F7dzesLHyytnhuUsDeff8';
@@ -196,12 +195,10 @@ async function fillMedicareForm(page, urlIndex) {
                 console.log(`[System] Creating new isolated browser context...`);
                 context = await browser.newContext({
                     proxy: {
-                        // Forcing credentials directly into the URL prevents the browser pop-up
-                        server: `http://${SURFSHARK_USER}:${SURFSHARK_PASS}@${proxyServer}`
+                        server: `http://${proxyServer}`,
+                        username: SURFSHARK_USER, 
+                        password: SURFSHARK_PASS
                     },
-                    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
-                    ignoreHTTPSErrors: true
-                });
                     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
                     ignoreHTTPSErrors: true
                 });

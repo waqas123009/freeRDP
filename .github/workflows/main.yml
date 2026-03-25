@@ -87,8 +87,8 @@ jobs:
           $hostName = "gh-runner-$env:GITHUB_RUN_ID"
           echo "TAILSCALE_HOSTNAME=$hostName" >> $env:GITHUB_ENV
           
-          # Bring up Tailscale. Added --ephemeral so dead runners auto-delete from your Tailnet!
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=$hostName --ephemeral
+          # Bring up Tailscale (Using the exact flags supported by the Windows CLI)
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --auth-key="${{ secrets.TAILSCALE_AUTH_KEY }}" --hostname="$hostName"
           
           # Wait for Tailscale to assign an IP
           $tsIP = $null

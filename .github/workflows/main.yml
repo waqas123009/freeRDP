@@ -11,32 +11,15 @@ jobs:
     steps:
       - name: Checkout Repository Code
         uses: actions/checkout@v4
-        
-      - name: Setup Node.js Environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
-      - name: Setup Public Bot Folder & Dependencies
-        shell: cmd
+      - name: Install Surfshark & Power Automate Desktop
+        shell: powershell
         run: |
-          echo Creating public Bot directory...
-          mkdir C:\Bot
+          Write-Host "Installing Official Surfshark Desktop App..."
+          choco install surfshark -y --no-progress
           
-          echo Copying bot script from repository...
-          copy "%GITHUB_WORKSPACE%\medicare-bot.js" "C:\Bot\medicare-bot.js"
-          
-          echo Granting full permissions to all users...
-          icacls "C:\Bot" /grant Everyone:(OI)(CI)F /T
-          
-          echo Initializing Node environment...
-          cd /d C:\Bot
-          call npm init -y
-          call npm install playwright
-          
-          echo Installing Chromium browser...
-          set PLAYWRIGHT_BROWSERS_PATH=C:\pw-browsers
-          call npx playwright install chromium
+          Write-Host "Installing Power Automate Desktop..."
+          choco install powerautomate -y --no-progress
 
       - name: Configure Core RDP Settings
         run: |
@@ -63,20 +46,6 @@ jobs:
           $tailscaleInstaller = "$env:TEMP\tailscale-setup.exe"
           Invoke-WebRequest -Uri $tailscaleUrl -OutFile $tailscaleInstaller
           Start-Process -FilePath $tailscaleInstaller -ArgumentList "/quiet", "/norestart" -Wait
-
-      - name: Create Desktop Launch Shortcut
-        shell: cmd
-        run: |
-          for /f "delims=" %%I in ('where node') do set NODE_EXE=%%I
-          
-          echo @echo off > "C:\Users\Public\Desktop\START_BOT.bat"
-          echo cd /d "C:\Bot" >> "C:\Users\Public\Desktop\START_BOT.bat"
-          echo echo Injecting Secrets and Starting Bot... >> "C:\Users\Public\Desktop\START_BOT.bat"
-          echo set "PLAYWRIGHT_BROWSERS_PATH=C:\pw-browsers" >> "C:\Users\Public\Desktop\START_BOT.bat"
-          echo set "SURFSHARK_MANUAL_USER=${{ secrets.SURFSHARK_MANUAL_USER }}" >> "C:\Users\Public\Desktop\START_BOT.bat"
-          echo set "SURFSHARK_MANUAL_PASS=${{ secrets.SURFSHARK_MANUAL_PASS }}" >> "C:\Users\Public\Desktop\START_BOT.bat"
-          echo "%NODE_EXE%" medicare-bot.js >> "C:\Users\Public\Desktop\START_BOT.bat"
-          echo pause >> "C:\Users\Public\Desktop\START_BOT.bat"
 
       - name: Establish Tailscale Connection
         run: |

@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 
-// 1. Credentials (Hardcoded to bypass environment variable failures)
+// 1. Credentials (Hardcoded)
 const SURFSHARK_USER = 'SHF8NLPGN8J3xDq9ej59XBQ2';
 const SURFSHARK_PASS = 'dd7F7dzesLHyytnhuUsDeff8';
 
@@ -168,7 +168,7 @@ async function fillMedicareForm(page, urlIndex) {
     }
 }
 
-// 8. Core Loop Engine (With Priority Queue & Dynamic Network Waiting)
+// 8. Core Loop Engine (With Priority Queue & Proxy Health Check)
 (async () => {
     console.log("Launching Browser...");
     const browser = await chromium.launch({ headless: false }); 
@@ -195,9 +195,7 @@ async function fillMedicareForm(page, urlIndex) {
                 console.log(`[System] Creating new isolated browser context...`);
                 context = await browser.newContext({
                     proxy: {
-                        // Using the standard http:// and port :80 that we know connects
-                        server: `http://${proxyServer}`, 
-                        // Passing the hardcoded credentials securely in Playwright's native format
+                        server: `http://${proxyServer}`,
                         username: SURFSHARK_USER, 
                         password: SURFSHARK_PASS
                     },
@@ -205,7 +203,6 @@ async function fillMedicareForm(page, urlIndex) {
                     ignoreHTTPSErrors: true
                 });
 
-                // INFINITE PATIENCE: Setting to 0 means the bot waits dynamically for the network response.
                 context.setDefaultTimeout(0);
                 context.setDefaultNavigationTimeout(0);
 
@@ -215,6 +212,21 @@ async function fillMedicareForm(page, urlIndex) {
                         : route.continue();
                 });
 
+                // === THE HEALTH CHECK ===
+                console.log(`[System] Performing Proxy Health Check on ${proxyServer}...`);
+                const testPage = await context.newPage();
+                try {
+                    await testPage.goto('https://api.ipify.org/', { timeout: 20000 });
+                    const currentIP = await testPage.innerText('body');
+                    console.log(`  -> [HEALTHY] Proxy is ALIVE! Traffic is routing as IP: ${currentIP}`);
+                    await testPage.close();
+                } catch (e) {
+                    console.log(`  -> [DEAD] Proxy completely failed to route internet: ${e.message.split('\n')[0]}`);
+                    await testPage.close();
+                    throw new Error("Health Check Failed. Forcing skip to next proxy.");
+                }
+                // =========================
+
                 console.log(`[System] Opening 6 concurrent tabs...`);
                 const pagePromises = targetUrls.map(async (url, index) => {
                     let page;
@@ -222,7 +234,6 @@ async function fillMedicareForm(page, urlIndex) {
                         page = await context.newPage();
                         console.log(`  -> [Tab ${index + 1}] Request sent. Waiting for server response...`);
                         
-                        // DOMCONTENTLOADED: Start filling the form the exact millisecond the HTML arrives.
                         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 0 });
                         await fillMedicareForm(page, index);
                         
@@ -235,7 +246,7 @@ async function fillMedicareForm(page, urlIndex) {
                 console.log(`[System] All tabs processed for this proxy.`);
             };
 
-            // THE 4-MINUTE KILL SWITCH: Gives slow proxies plenty of time to work, but prevents permanent freezing.
+            // THE 4-MINUTE KILL SWITCH
             await runWithTimeout(loopLogic(), 240000, "CRITICAL TIMEOUT: Proxy completely froze the network for 4 minutes. Hard skipping.");
 
         } catch (error) {

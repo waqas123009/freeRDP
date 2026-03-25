@@ -61,10 +61,16 @@ jobs:
               exit 1
           }
 
-      - name: Install Latest Tailscale
+      - name: Install Official Latest Tailscale
         run: |
-          # Use Chocolatey package manager to automatically fetch and install the absolute latest stable version
-          choco install tailscale -y
+          Write-Host "Fetching latest Tailscale directly from official servers..."
+          $tailscaleUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe"
+          $tailscaleInstaller = "$env:TEMP\tailscale-setup.exe"
+          
+          Invoke-WebRequest -Uri $tailscaleUrl -OutFile $tailscaleInstaller
+          
+          Write-Host "Installing Tailscale silently in the background..."
+          Start-Process -FilePath $tailscaleInstaller -ArgumentList "/quiet", "/norestart" -Wait
 
       - name: Install Automation Tools (PAD & Surfshark)
         run: |

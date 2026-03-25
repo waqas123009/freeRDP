@@ -195,8 +195,11 @@ async function fillMedicareForm(page, urlIndex) {
                 console.log(`[System] Creating new isolated browser context...`);
                 context = await browser.newContext({
                     proxy: {
-                        // Upgrades to HTTPS and forces port 443 dynamically
-                        server: `https://${SURFSHARK_USER}:${SURFSHARK_PASS}@${proxyServer.replace(':80', ':443')}`
+                        // Using the standard http:// and port :80 that we know connects
+                        server: `http://${proxyServer}`, 
+                        // Passing the hardcoded credentials securely in Playwright's native format
+                        username: SURFSHARK_USER, 
+                        password: SURFSHARK_PASS
                     },
                     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
                     ignoreHTTPSErrors: true

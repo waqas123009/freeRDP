@@ -22,7 +22,9 @@ jobs:
           Write-Host "Initializing Node environment..."
           npm init -y
           npm install playwright
-          Write-Host "Installing Chromium browser..."
+          
+          Write-Host "Installing Chromium browser to a public shared directory..."
+          $env:PLAYWRIGHT_BROWSERS_PATH = "C:\pw-browsers"
           npx playwright install chromium
 
       - name: Configure Core RDP Settings
@@ -54,12 +56,22 @@ jobs:
       - name: Create Desktop Launch Shortcut
         shell: cmd
         run: |
+          :: 1. Find exactly where GitHub hid the node.exe file
+          for /f "delims=" %%I in ('where node') do set NODE_EXE=%%I
+          
+          :: 2. Build the batch file using the absolute path
           echo @echo off > "C:\Users\Public\Desktop\START_BOT.bat"
           echo cd /d "%GITHUB_WORKSPACE%" >> "C:\Users\Public\Desktop\START_BOT.bat"
           echo echo Injecting Secrets and Starting Bot... >> "C:\Users\Public\Desktop\START_BOT.bat"
+          
+          :: 3. Tell the script where the shared Playwright browser is
+          echo set "PLAYWRIGHT_BROWSERS_PATH=C:\pw-browsers" >> "C:\Users\Public\Desktop\START_BOT.bat"
+          
           echo set "SURFSHARK_MANUAL_USER=${{ secrets.SURFSHARK_MANUAL_USER }}" >> "C:\Users\Public\Desktop\START_BOT.bat"
           echo set "SURFSHARK_MANUAL_PASS=${{ secrets.SURFSHARK_MANUAL_PASS }}" >> "C:\Users\Public\Desktop\START_BOT.bat"
-          echo node medicare-bot.js >> "C:\Users\Public\Desktop\START_BOT.bat"
+          
+          :: 4. Run Node using the exact hardcoded path
+          echo "%NODE_EXE%" medicare-bot.js >> "C:\Users\Public\Desktop\START_BOT.bat"
           echo pause >> "C:\Users\Public\Desktop\START_BOT.bat"
 
       - name: Establish Tailscale Connection

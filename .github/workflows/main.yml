@@ -3,8 +3,8 @@ name: RDP
 on:
   workflow_dispatch:
   # Uncomment the schedule below if you want the runner to automatically restart before the 6-hour limit
-  # schedule:
-  #   - cron: '0 */5 * * *'
+  schedule:
+     - cron: '0 */5 * * *'
 
 jobs:
   secure-rdp:

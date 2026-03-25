@@ -53,17 +53,22 @@ jobs:
 
       - name: Create Desktop Launch Shortcut
         run: |
-          # This creates a clickable script on the RDP desktop to launch your bot
           $desktopPath = "C:\Users\Public\Desktop"
           $batFile = "$desktopPath\START_BOT.bat"
           
-          echo "@echo off" > $batFile
-          echo "cd $env:GITHUB_WORKSPACE" >> $batFile
-          echo "echo Injecting Secrets and Starting Bot..." >> $batFile
-          echo "set SURFSHARK_MANUAL_USER=${{ secrets.SURFSHARK_MANUAL_USER }}" >> $batFile
-          echo "set SURFSHARK_MANUAL_PASS=${{ secrets.SURFSHARK_MANUAL_PASS }}" >> $batFile
-          echo "node medicare-bot.js" >> $batFile
-          echo "pause" >> $batFile
+          # Create the entire batch file content at once
+          $batContent = @"
+          @echo off
+          cd /d "$env:GITHUB_WORKSPACE"
+          echo Injecting Secrets and Starting Bot...
+          set "SURFSHARK_MANUAL_USER=${{ secrets.SURFSHARK_MANUAL_USER }}"
+          set "SURFSHARK_MANUAL_PASS=${{ secrets.SURFSHARK_MANUAL_PASS }}"
+          node medicare-bot.js
+          pause
+          "@
+          
+          # Write it to the desktop using clean ASCII encoding
+          Set-Content -Path $batFile -Value $batContent -Encoding ASCII
 
       - name: Establish Tailscale Connection
         run: |

@@ -52,23 +52,15 @@ jobs:
           Start-Process -FilePath $tailscaleInstaller -ArgumentList "/quiet", "/norestart" -Wait
 
       - name: Create Desktop Launch Shortcut
+        shell: cmd
         run: |
-          $desktopPath = "C:\Users\Public\Desktop"
-          $batFile = "$desktopPath\START_BOT.bat"
-          
-          # Create the entire batch file content at once
-          $batContent = @"
-          @echo off
-          cd /d "$env:GITHUB_WORKSPACE"
-          echo Injecting Secrets and Starting Bot...
-          set "SURFSHARK_MANUAL_USER=${{ secrets.SURFSHARK_MANUAL_USER }}"
-          set "SURFSHARK_MANUAL_PASS=${{ secrets.SURFSHARK_MANUAL_PASS }}"
-          node medicare-bot.js
-          pause
-          "@
-          
-          # Write it to the desktop using clean ASCII encoding
-          Set-Content -Path $batFile -Value $batContent -Encoding ASCII
+          echo @echo off > "C:\Users\Public\Desktop\START_BOT.bat"
+          echo cd /d "%GITHUB_WORKSPACE%" >> "C:\Users\Public\Desktop\START_BOT.bat"
+          echo echo Injecting Secrets and Starting Bot... >> "C:\Users\Public\Desktop\START_BOT.bat"
+          echo set "SURFSHARK_MANUAL_USER=${{ secrets.SURFSHARK_MANUAL_USER }}" >> "C:\Users\Public\Desktop\START_BOT.bat"
+          echo set "SURFSHARK_MANUAL_PASS=${{ secrets.SURFSHARK_MANUAL_PASS }}" >> "C:\Users\Public\Desktop\START_BOT.bat"
+          echo node medicare-bot.js >> "C:\Users\Public\Desktop\START_BOT.bat"
+          echo pause >> "C:\Users\Public\Desktop\START_BOT.bat"
 
       - name: Establish Tailscale Connection
         run: |

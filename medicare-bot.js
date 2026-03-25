@@ -195,7 +195,8 @@ async function fillMedicareForm(page, urlIndex) {
                 console.log(`[System] Creating new isolated browser context...`);
                 context = await browser.newContext({
                     proxy: {
-                        server: `http://${proxyServer}`,
+                        // Forces secure HTTPS connection to Surfshark's actual proxy port
+                        server: `https://${proxyServer.replace(':80', ':443')}`,
                         username: SURFSHARK_USER, 
                         password: SURFSHARK_PASS
                     },

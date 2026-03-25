@@ -15,11 +15,26 @@ jobs:
       - name: Install Surfshark & Power Automate Desktop
         shell: powershell
         run: |
-          Write-Host "Installing Official Surfshark Desktop App..."
-          choco install surfshark -y --no-progress
+          # 1. Install Surfshark via official EXE
+          Write-Host "Downloading Surfshark Installer..."
+          $surfsharkUrl = "https://downloads.surfshark.com/windows/latest/SurfsharkSetup.exe"
+          $surfsharkPath = "$env:TEMP\SurfsharkSetup.exe"
+          Invoke-WebRequest -Uri $surfsharkUrl -OutFile $surfsharkPath
           
-          Write-Host "Installing Power Automate Desktop..."
-          choco install powerautomate -y --no-progress
+          Write-Host "Installing Surfshark (Silent)..."
+          Start-Process -FilePath $surfsharkPath -ArgumentList "/S" -Wait
+
+          # 2. Install Power Automate Desktop via official MSI
+          Write-Host "Downloading Power Automate Desktop..."
+          $padUrl = "https://go.microsoft.com/fwlink/?linkid=2102613"
+          $padPath = "$env:TEMP\PowerAutomateDesktop.exe"
+          Invoke-WebRequest -Uri $padUrl -OutFile $padPath
+          
+          Write-Host "Installing Power Automate (Silent)..."
+          # PAD installer uses /Quiet /NoRestart for silent setup
+          Start-Process -FilePath $padPath -ArgumentList "/Quiet", "/NoRestart" -Wait
+          
+          Write-Host "Installation complete."
 
       - name: Configure Core RDP Settings
         run: |

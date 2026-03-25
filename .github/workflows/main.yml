@@ -88,12 +88,28 @@ jobs:
           # The /exenoui and /qn arguments force Surfshark to install completely silently
           Start-Process -FilePath $surfsharkInstaller -ArgumentList "/exenoui", "/qn" -Wait
 
+      - name: Set Up Auto-Launch for Apps
+        run: |
+          Write-Host "Configuring startup script..."
+          $startupFolder = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
+          $launcherScript = "$startupFolder\AutoLaunch.bat"
+          
+          echo "@echo off" > $launcherScript
+          echo "echo Launching Surfshark..." >> $launcherScript
+          echo "start """" ""C:\Program Files\Surfshark\Surfshark.exe""" >> $launcherScript
+          
+          # Give Surfshark 3 seconds to spin up its background services
+          echo "timeout /t 3 /nobreak" >> $launcherScript
+          
+          echo "echo Launching Power Automate Desktop..." >> $launcherScript
+          echo "start """" ""C:\Program Files (x86)\Power Automate Desktop\PAD.Console.Host.exe""" >> $launcherScript
+
       - name: Establish Tailscale Connection
         run: |
           $hostName = "gh-runner-$env:GITHUB_RUN_ID"
           echo "TAILSCALE_HOSTNAME=$hostName" >> $env:GITHUB_ENV
           
-          # Bring up Tailscale (Using the exact flags supported by the Windows CLI)
+          # Bring up Tailscale 
           & "$env:ProgramFiles\Tailscale\tailscale.exe" up --auth-key="${{ secrets.TAILSCALE_AUTH_KEY }}" --hostname="$hostName"
           
           # Wait for Tailscale to assign an IP

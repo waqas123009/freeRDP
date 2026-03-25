@@ -66,20 +66,21 @@ jobs:
           # Use Chocolatey package manager to automatically fetch and install the absolute latest stable version
           choco install tailscale -y
 
-      - name: Install Automation Tools & Surfshark
+      - name: Install Automation Tools (PAD & Surfshark)
         run: |
-          
           Write-Host "Downloading and Installing Power Automate Desktop..."
           $padUrl = "https://go.microsoft.com/fwlink/?linkid=2102613"
           $padInstaller = "$env:TEMP\Setup.Microsoft.PowerAutomate.exe"
           Invoke-WebRequest -Uri $padUrl -OutFile $padInstaller
-          # The -Silent argument ensures it installs in the background without needing clicks
+          # The -Silent argument ensures PAD installs in the background
           Start-Process -FilePath $padInstaller -ArgumentList "-Silent", "-Install", "-AcceptEula" -Wait
           
-          Write-Host "Downloading Surfshark Installer to Public Desktop..."
+          Write-Host "Downloading and Installing Surfshark VPN..."
           $surfsharkUrl = "https://downloads.surfshark.com/windows/latest/SurfsharkSetup.exe"
-          $publicDesktopPath = "C:\Users\Public\Desktop\SurfsharkSetup.exe"
-          Invoke-WebRequest -Uri $surfsharkUrl -OutFile $publicDesktopPath
+          $surfsharkInstaller = "$env:TEMP\SurfsharkSetup.exe"
+          Invoke-WebRequest -Uri $surfsharkUrl -OutFile $surfsharkInstaller
+          # The /exenoui and /qn arguments force Surfshark to install completely silently
+          Start-Process -FilePath $surfsharkInstaller -ArgumentList "/exenoui", "/qn" -Wait
 
       - name: Establish Tailscale Connection
         run: |
@@ -128,5 +129,5 @@ jobs:
           # Keep runner active indefinitely (up to GitHub's max limit of 6 hours)
           while ($true) {
               Write-Host "[$(Get-Date)] RDP Active - Use Ctrl+C in workflow to terminate"
-              Start-Sleep -Seconds 3000
+              Start-Sleep -Seconds 300
           }

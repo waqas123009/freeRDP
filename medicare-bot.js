@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 // 1. Credentials
 // 1. Credentials (Hardcoded to bypass environment variable failures)
 const SURFSHARK_USER = 'SHF8NLPGN8J3xDq9ej59XBQ2';
-const SURFSHARK_PASS = 'dd7F7dzesLHyytnhuUsDeff8';;
+const SURFSHARK_PASS = 'dd7F7dzesLHyytnhuUsDeff8';
 
 // 2. The Priority Server Queue (These 54 run sequentially FIRST)
 const priorityServers = [

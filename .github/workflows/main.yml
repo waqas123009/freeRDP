@@ -1,4 +1,4 @@
-name: Bot Visual Test RDP
+name: Free RDP
 
 on:
   workflow_dispatch:

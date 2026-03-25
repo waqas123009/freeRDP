@@ -168,7 +168,7 @@ async function fillMedicareForm(page, urlIndex) {
     }
 }
 
-// 8. Core Loop Engine (With Priority Queue)
+// 8. Core Loop Engine (With Priority Queue & Dynamic Network Waiting)
 (async () => {
     console.log("Launching Browser...");
     const browser = await chromium.launch({ headless: false }); 
@@ -176,7 +176,6 @@ async function fillMedicareForm(page, urlIndex) {
     for (let i = 1; i <= 3000; i++) {
         let proxyServer;
         
-        // Priority check: Use the 54 specific servers first, then switch to random
         if (i <= priorityServers.length) {
             proxyServer = priorityServers[i - 1];
             console.log(`\n===========================================`);
@@ -204,8 +203,9 @@ async function fillMedicareForm(page, urlIndex) {
                     ignoreHTTPSErrors: true
                 });
 
-                context.setDefaultTimeout(30000);
-                context.setDefaultNavigationTimeout(30000);
+                // INFINITE PATIENCE: Setting to 0 means the bot waits dynamically for the network response.
+                context.setDefaultTimeout(0);
+                context.setDefaultNavigationTimeout(0);
 
                 await context.route('**/*', (route) => {
                     return ['image', 'font', 'media'].includes(route.request().resourceType()) 
@@ -218,13 +218,14 @@ async function fillMedicareForm(page, urlIndex) {
                     let page;
                     try {
                         page = await context.newPage();
-                        console.log(`  -> [Tab ${index + 1}] Navigating to URL...`);
+                        console.log(`  -> [Tab ${index + 1}] Request sent. Waiting for server response...`);
                         
-                        await page.goto(url, { waitUntil: 'load', timeout: 30000 });
+                        // DOMCONTENTLOADED: Start filling the form the exact millisecond the HTML arrives.
+                        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 0 });
                         await fillMedicareForm(page, index);
                         
                     } catch (navErr) {
-                        console.log(`  -> [Tab ${index + 1}] FAILED: ${navErr.message.split('\n')[0]}`);
+                        console.log(`  -> [Tab ${index + 1}] NETWORK FAILURE: ${navErr.message.split('\n')[0]}`);
                     }
                 });
 
@@ -232,7 +233,8 @@ async function fillMedicareForm(page, urlIndex) {
                 console.log(`[System] All tabs processed for this proxy.`);
             };
 
-            await runWithTimeout(loopLogic(), 90000, "CRITICAL TIMEOUT: The Proxy completely froze the system. Forcing a hard skip.");
+            // THE 4-MINUTE KILL SWITCH: Gives slow proxies plenty of time to work, but prevents permanent freezing.
+            await runWithTimeout(loopLogic(), 240000, "CRITICAL TIMEOUT: Proxy completely froze the network for 4 minutes. Hard skipping.");
 
         } catch (error) {
             console.log(`\n[ABORT] ${error.message}`);

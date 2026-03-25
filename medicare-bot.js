@@ -1,8 +1,9 @@
 const { chromium } = require('playwright');
 
 // 1. Credentials
-const SURFSHARK_USER = process.env.SURFSHARK_MANUAL_USER;
-const SURFSHARK_PASS = process.env.SURFSHARK_MANUAL_PASS;
+// 1. Credentials (Hardcoded to bypass environment variable failures)
+const SURFSHARK_USER = 'SHF8NLPGN8J3xDq9ej59XBQ2';
+const SURFSHARK_PASS = 'dd7F7dzesLHyytnhuUsDeff8';;
 
 // 2. The Priority Server Queue (These 54 run sequentially FIRST)
 const priorityServers = [
@@ -195,11 +196,12 @@ async function fillMedicareForm(page, urlIndex) {
                 console.log(`[System] Creating new isolated browser context...`);
                 context = await browser.newContext({
                     proxy: {
-                        // Forces secure HTTPS connection to Surfshark's actual proxy port
-                        server: `https://${proxyServer.replace(':80', ':443')}`,
-                        username: SURFSHARK_USER, 
-                        password: SURFSHARK_PASS
+                        // Forcing credentials directly into the URL prevents the browser pop-up
+                        server: `http://${SURFSHARK_USER}:${SURFSHARK_PASS}@${proxyServer}`
                     },
+                    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+                    ignoreHTTPSErrors: true
+                });
                     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
                     ignoreHTTPSErrors: true
                 });

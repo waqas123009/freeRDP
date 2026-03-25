@@ -1,118 +1,77 @@
-name: RDP
+name: Bot Visual Test RDP
 
 on:
   workflow_dispatch:
-  # Uncomment the schedule below if you want the runner to automatically restart before the 6-hour limit
-  schedule:
-     - cron: '0 */5 * * *'
 
 jobs:
-  secure-rdp:
+  test-bot:
     runs-on: windows-latest
-    timeout-minutes: 3600
+    timeout-minutes: 360
 
     steps:
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright & Dependencies
+        run: |
+          Write-Host "Initializing Node environment..."
+          npm init -y
+          npm install playwright
+          Write-Host "Installing Chromium browser..."
+          npx playwright install chromium
+
       - name: Configure Core RDP Settings
         run: |
-          # Enable Remote Desktop and disable Network Level Authentication
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
-                               -Name "fDenyTSConnections" -Value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                               -Name "UserAuthentication" -Value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                               -Name "SecurityLayer" -Value 0 -Force
-
-          # Remove any existing rule with the same name to avoid duplication
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "SecurityLayer" -Value 0 -Force
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
-          
-          # Allow incoming connection on port 3389
-          netsh advfirewall firewall add rule name="RDP-Tailscale" `
-            dir=in action=allow protocol=TCP localport=3389
-
-          # Restart the Remote Desktop service to ensure changes take effect
+          netsh advfirewall firewall add rule name="RDP-Tailscale" dir=in action=allow protocol=TCP localport=3389
           Restart-Service -Name TermService -Force
 
-      - name: Create RDP User with Secure Password
+      - name: Create RDP User
         run: |
           Add-Type -AssemblyName System.Security
-          $charSet = @{
-              Upper   = [char[]](65..90)      # A-Z
-              Lower   = [char[]](97..122)     # a-z
-              Number  = [char[]](48..57)      # 0-9
-              Special = ([char[]](33..47) + [char[]](58..64) +
-                         [char[]](91..96) + [char[]](123..126)) # Special characters
-          }
-          $rawPassword = @()
-          $rawPassword += $charSet.Upper | Get-Random -Count 4
-          $rawPassword += $charSet.Lower | Get-Random -Count 4
-          $rawPassword += $charSet.Number | Get-Random -Count 4
-          $rawPassword += $charSet.Special | Get-Random -Count 4
-          $password = -join ($rawPassword | Sort-Object { Get-Random })
+          $password = "BotTest@2026!"
           $securePass = ConvertTo-SecureString $password -AsPlainText -Force
           New-LocalUser -Name "RDP" -Password $securePass -AccountNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "RDP"
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member "RDP"
-          
-          # Store just the raw password string so it formats cleanly later
           echo "RDP_PASS=$password" >> $env:GITHUB_ENV
-          
-          if (-not (Get-LocalUser -Name "RDP")) {
-              Write-Error "User creation failed"
-              exit 1
-          }
 
       - name: Install Official Latest Tailscale
         run: |
-          Write-Host "Fetching latest Tailscale directly from official servers..."
           $tailscaleUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe"
           $tailscaleInstaller = "$env:TEMP\tailscale-setup.exe"
-          
           Invoke-WebRequest -Uri $tailscaleUrl -OutFile $tailscaleInstaller
-          
-          Write-Host "Installing Tailscale silently in the background..."
           Start-Process -FilePath $tailscaleInstaller -ArgumentList "/quiet", "/norestart" -Wait
 
-      - name: Install Automation Tools (PAD & Surfshark)
+      - name: Create Desktop Launch Shortcut
         run: |
-          Write-Host "Downloading and Installing Power Automate Desktop..."
-          $padUrl = "https://go.microsoft.com/fwlink/?linkid=2102613"
-          $padInstaller = "$env:TEMP\Setup.Microsoft.PowerAutomate.exe"
-          Invoke-WebRequest -Uri $padUrl -OutFile $padInstaller
-          # The -Silent argument ensures PAD installs in the background
-          Start-Process -FilePath $padInstaller -ArgumentList "-Silent", "-Install", "-AcceptEula" -Wait
+          # This creates a clickable script on the RDP desktop to launch your bot
+          $desktopPath = "C:\Users\Public\Desktop"
+          $batFile = "$desktopPath\START_BOT.bat"
           
-          Write-Host "Downloading and Installing Surfshark VPN..."
-          $surfsharkUrl = "https://downloads.surfshark.com/windows/latest/SurfsharkSetup.exe"
-          $surfsharkInstaller = "$env:TEMP\SurfsharkSetup.exe"
-          Invoke-WebRequest -Uri $surfsharkUrl -OutFile $surfsharkInstaller
-          # The /exenoui and /qn arguments force Surfshark to install completely silently
-          Start-Process -FilePath $surfsharkInstaller -ArgumentList "/exenoui", "/qn" -Wait
-
-      - name: Set Up Auto-Launch for Apps
-        run: |
-          Write-Host "Configuring startup script..."
-          $startupFolder = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
-          $launcherScript = "$startupFolder\AutoLaunch.bat"
-          
-          echo "@echo off" > $launcherScript
-          echo "echo Launching Surfshark..." >> $launcherScript
-          echo "start """" ""C:\Program Files\Surfshark\Surfshark.exe""" >> $launcherScript
-          
-          # Give Surfshark 3 seconds to spin up its background services
-          echo "timeout /t 3 /nobreak" >> $launcherScript
-          
-          echo "echo Launching Power Automate Desktop..." >> $launcherScript
-          echo "start """" ""C:\Program Files (x86)\Power Automate Desktop\PAD.Console.Host.exe""" >> $launcherScript
+          echo "@echo off" > $batFile
+          echo "cd $env:GITHUB_WORKSPACE" >> $batFile
+          echo "echo Injecting Secrets and Starting Bot..." >> $batFile
+          echo "set SURFSHARK_MANUAL_USER=${{ secrets.SURFSHARK_MANUAL_USER }}" >> $batFile
+          echo "set SURFSHARK_MANUAL_PASS=${{ secrets.SURFSHARK_MANUAL_PASS }}" >> $batFile
+          echo "node medicare-bot.js" >> $batFile
+          echo "pause" >> $batFile
 
       - name: Establish Tailscale Connection
         run: |
           $hostName = "gh-runner-$env:GITHUB_RUN_ID"
           echo "TAILSCALE_HOSTNAME=$hostName" >> $env:GITHUB_ENV
           
-          # Bring up Tailscale 
           & "$env:ProgramFiles\Tailscale\tailscale.exe" up --auth-key="${{ secrets.TAILSCALE_AUTH_KEY }}" --hostname="$hostName"
           
-          # Wait for Tailscale to assign an IP
           $tsIP = $null
           $retries = 0
           while (-not $tsIP -and $retries -lt 10) {
@@ -120,36 +79,14 @@ jobs:
               Start-Sleep -Seconds 5
               $retries++
           }
-          
-          if (-not $tsIP) {
-              Write-Error "Tailscale IP not assigned. Exiting."
-              exit 1
-          }
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
-       
-      - name: Verify RDP Accessibility
-        run: |
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          
-          # Test connectivity using Test-NetConnection against the Tailscale IP on port 3389
-          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
-          if (-not $testResult.TcpTestSucceeded) {
-              Write-Error "TCP connection to RDP port 3389 failed"
-              exit 1
-          }
-          Write-Host "TCP connectivity successful!"
 
       - name: Maintain Connection
         run: |
           Write-Host "`n=== RDP ACCESS CREDENTIALS ==="
-          Write-Host "Computer (Use this!): $env:TAILSCALE_HOSTNAME"
-          Write-Host "Backup IP Address : $env:TAILSCALE_IP"
-          Write-Host "Username          : RDP"
-          Write-Host "Password          : $env:RDP_PASS"
+          Write-Host "Computer : $env:TAILSCALE_HOSTNAME"
+          Write-Host "Username : RDP"
+          Write-Host "Password : $env:RDP_PASS"
           Write-Host "==============================`n"
           
-          # Keep runner active indefinitely (up to GitHub's max limit of 6 hours)
-          while ($true) {
-              Write-Host "[$(Get-Date)] RDP Active - Use Ctrl+C in workflow to terminate"
-              Start-Sleep -Seconds 300
-          }
+          while ($true) { Start-Sleep -Seconds 300 }

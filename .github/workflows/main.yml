@@ -8,7 +8,7 @@ on:
 
 jobs:
   secure-rdp:
-    runs-on: windows-latest
+    runs-on: self-hosted
     timeout-minutes: 3600
 
     steps:
